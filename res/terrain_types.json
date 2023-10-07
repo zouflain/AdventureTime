@@ -1,0 +1,22 @@
+[
+  {
+    "name": "water",
+    "traversal": ["swim","fly"],
+    "hazardous": []
+  },
+  {
+    "name": "soil",
+    "traversal": ["walk","swim","fly"],
+    "hazardous": []
+  },
+  {
+    "name": "stone_wall",
+    "traversal": [],
+    "hazardous": []
+  },
+  {
+    "name": "lava",
+    "traversal": ["fly","swim"],
+    "hazardous": ["swim"]
+  }
+]
