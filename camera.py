@@ -1,3 +1,4 @@
+from OpenGL.GL import *
 import numpy as np
 
 
@@ -26,14 +27,24 @@ class Camera:
     )
 
     def __init__(self, perspective: np.array = None, ortho: np.array = None, view: np.array = None):
-        self.perspective = Camera.identity if perspective is None else perspective
-        self.ortho = Camera.identity if ortho is None else ortho
-        self.view = Camera.identity if view is None else view
+        self.perspective = np.identity(4,dtype=np.float32) if perspective is None else perspective
+        self.ortho = np.identity(4,dtype=np.float32) if ortho is None else ortho
+        self.view = np.identity(4,dtype=np.float32) if view is None else view
         self.center = np.zeros(3, dtype=np.float32)
         self.desired_center = np.zeros(3, dtype=np.float32)
         self.source_center = np.zeros(3, dtype=np.float32)
         self.distance = 1
         self.theta = np.pi/4
+
+        # Build UBO
+        arr = np.zeros(1, dtype=np.uint)
+        glCreateBuffers(1, arr)
+        self.ubo = arr[0]
+        matrix_arr = np.array(
+            (self.ortho, self.view),
+            dtype=np.float32
+        )
+        glNamedBufferStorage(self.ubo, matrix_arr.nbytes, matrix_arr, GL_DYNAMIC_STORAGE_BIT | GL_MAP_READ_BIT)
 
         self.reconstruct()
 
@@ -45,6 +56,11 @@ class Camera:
             d=self.distance,
             theta=self.theta
         )
+        matrix_arr = np.array(
+            (self.ortho, self.view),
+            dtype=np.float32
+        )
+        glNamedBufferSubData(self.ubo, 0, matrix_arr.nbytes, matrix_arr)
 
     def pan(self, x: float, y: float, z: float):
         self.source_center = self.desired_center

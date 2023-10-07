@@ -46,7 +46,7 @@ class Game(QtOpenGLWidgets.QOpenGLWidget):
         self.listeners = {}
         self.systems = [Renderer(self), InteractionSystem(), CameraSystem(self)]
 
-        self.camera = Camera()
+        self.camera = None
         self.meshes = {}
         self.shaders = {}
         self.textures = {}
@@ -101,6 +101,8 @@ class Game(QtOpenGLWidgets.QOpenGLWidget):
         glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA)
         glHint(GL_LINE_SMOOTH_HINT,GL_NICEST)'''
         glClearColor(0, 0, 0, 0)
+
+        self.camera = Camera()
 
         self.loadShader("res/shaders/triangle")
         self.loadShader("res/shaders/sobeledge")
@@ -243,7 +245,7 @@ import cProfile, pstats
 def main():
     format = QSurfaceFormat()
     format.setSamples(16)
-    format.setSwapInterval(0)
+    format.setSwapInterval(1)
     format.setSwapBehavior(QSurfaceFormat.SwapBehavior.DoubleBuffer)
     QSurfaceFormat.setDefaultFormat(format)
 

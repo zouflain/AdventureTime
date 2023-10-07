@@ -50,8 +50,7 @@ class Renderer(BaseSystem):
         shader = game.shaders.get("res/shaders/triangle", 0)
         glUseProgram(shader)
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, self.lights_ubo)
-        glUniformMatrix4fv(8, 1, GL_FALSE, camera.view)
-        glUniformMatrix4fv(6, 1, GL_FALSE, camera.ortho)
+        glBindBufferBase(GL_UNIFORM_BUFFER, 2, camera.ubo)
 
         # Assemble Mesh groups
         mesh_groups = {}
