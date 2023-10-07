@@ -1,21 +1,20 @@
 #version 450
 
+layout(location = 0) uniform sampler2D tex;
+
+layout(binding = 0, std140) uniform Block{
+    mat4 model;
+    int eid;
+};
+
 struct Light{
     float diffuse[3];
     float ambient[3];
     float position[3];
 };
-
-layout(location = 9) uniform sampler2D tex;
-layout(binding = 0, std140) uniform Block{
-    mat4 model;
-    int eid;
-};
 layout(std430, binding = 1) buffer Lights{
     Light lights[];
 };
-
-layout(location = 10) uniform int entity_id; // For click detection
 
 in vec2 uv_coords;
 in vec3 frag_normal;

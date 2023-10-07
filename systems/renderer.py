@@ -22,7 +22,6 @@ class Renderer(BaseSystem):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         camera = game.getCamera()
         camera.interpolate(event.t)
-        print(event.t)
         if not self.lights_ubo:
             arr = np.zeros(1, dtype=np.uint)
             glCreateBuffers(1, arr)
@@ -68,7 +67,8 @@ class Renderer(BaseSystem):
                 glBindTexture(GL_TEXTURE_2D, mesh.texture)
                 mesh.preRender()
                 for model_ubo in mesh_group:
-                    mesh.render(model_ubo)
+                    glBindBufferBase(GL_UNIFORM_BUFFER, 0, model_ubo)
+                    mesh.render()
 
         #Clean up
         Mesh.postRender()

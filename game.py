@@ -55,7 +55,7 @@ class Game(QtOpenGLWidgets.QOpenGLWidget):
         self.timers = {}
         self.timers["render"] = QTimer()
         self.timers["render"].timeout.connect(self.update)
-        self.timers["render"].setInterval(16)
+        self.timers["render"].setInterval(8)
         self.timers["render"].start()
 
         self.timers["fixed_step"] = QTimer()
@@ -254,13 +254,6 @@ def main():
     sys.exit(app.exec())
 
 if __name__ == "__main__":
-    '''
-    context = self.context()
-    surface = context.surface()
-    context.setFormat(format)
-    context.create()
-    context.makeCurrent(surface)
-    '''
     cProfile.run("main()", filename="profile.prof")
     print(frames)
     stats = pstats.Stats("profile.prof")

@@ -24,7 +24,6 @@ class CameraSystem(BaseSystem):
         change = np.zeros(2, dtype=np.float32)
         if mouse_pos[0] <= self.WINDOW_SCROLL_MARGIN:
             change[0] = self.WINDOW_SCROLL_SPEED*((self.WINDOW_SCROLL_MARGIN-mouse_pos[0])/self.WINDOW_SCROLL_MARGIN)
-            print("Pan Left)")
         elif mouse_pos[0] >= wres[0]-self.WINDOW_SCROLL_MARGIN:
             change[0] = -self.WINDOW_SCROLL_SPEED*(1-((wres[0]-mouse_pos[0])/self.WINDOW_SCROLL_MARGIN))
 
@@ -32,8 +31,6 @@ class CameraSystem(BaseSystem):
             change[1] = -self.WINDOW_SCROLL_SPEED*((self.WINDOW_SCROLL_MARGIN-mouse_pos[1])/self.WINDOW_SCROLL_MARGIN)
         elif mouse_pos[1] >= wres[1] - self.WINDOW_SCROLL_MARGIN:
             change[1] = self.WINDOW_SCROLL_SPEED*(1-((wres[1]-mouse_pos[1])/self.WINDOW_SCROLL_MARGIN))
-
-        #change = change / (np.linalg.norm(change) or 1)
 
         game.camera.pan(-np.cos(theta)*change[0], -np.sin(theta)*change[1], 0)
         return False
