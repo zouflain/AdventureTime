@@ -20,3 +20,8 @@ class RenderEvent(GameEvent):
         super().__init__()
         self.t = coef
 
+
+class RebuildDjikstraEvent(GameEvent):
+    def __init__(self):
+        super().__init__()
+

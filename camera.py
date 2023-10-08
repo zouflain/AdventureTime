@@ -62,8 +62,10 @@ class Camera:
         )
         glNamedBufferSubData(self.ubo, 0, matrix_arr.nbytes, matrix_arr)
 
+    def update(self):
+        self.source_center = self.desired_center.copy()
+
     def pan(self, x: float, y: float, z: float):
-        self.source_center = self.desired_center
         self.desired_center[0] = self.source_center[0]+x
         self.desired_center[1] = self.source_center[1]+y
         self.desired_center[2] = self.source_center[2]+z

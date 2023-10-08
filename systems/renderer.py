@@ -3,10 +3,8 @@ from systems.listener import Listener
 from entity import EntityManager
 from components import *
 from OpenGL.GL import *
-from OpenGL import GLU
 from gameevents import *
-from components import Renderable, Renderable3D, WorldPosition
-from mesh import Mesh
+from components import Renderable3D
 
 MAX_LIGHTS = 100
 
@@ -29,7 +27,6 @@ class Renderer(BaseSystem):
             glNamedBufferStorage(self.lights_ubo, 36*MAX_LIGHTS, None, GL_DYNAMIC_STORAGE_BIT | GL_MAP_READ_BIT)
 
         # Render 3D entities
-        entities = EntityManager.findEntities([Renderable3D])
         lights = [LightSource.get(light) for light in EntityManager.findEntities([LightSource])][:MAX_LIGHTS]
         light_data = np.array(
             [
@@ -53,6 +50,7 @@ class Renderer(BaseSystem):
 
         # Assemble Mesh groups
         mesh_groups = {}
+        entities = EntityManager.findEntities([Renderable3D])
         for entity in entities:
             renderable = Renderable3D.get(entity)
             for mesh in renderable.meshes:
@@ -71,9 +69,8 @@ class Renderer(BaseSystem):
                     mesh.render()
 
         #Clean up
-        Mesh.postRender()
-        glUseProgram(0)
         glBindTexture(GL_TEXTURE_2D, 0)
+        glUseProgram(0)
 
         return False
 

@@ -12,6 +12,7 @@ class CameraSystem(BaseSystem):
         game.addListener(FixedTimeStepEvent, self.listener)
 
     def fixedTimeStep(self, game, event: FixedTimeStepEvent) -> bool:
+        game.camera.update()
         pos = game.mapFromGlobal(QCursor().pos())
         wres = game.getConfigProp("window","size")
         mouse_pos = np.array(

@@ -53,6 +53,13 @@ class LightSource(BaseComponent):
         self.diffuse = diffuse
 
 
+class DjikstraSet(BaseComponent):
+    def __init__(self):
+        super().__init__()
+        self.walk_map = None
+        self.fly_map = None
+        self.sight_map = None
+
 class Renderable(BaseComponent):
     def __init__(self):
         super().__init__()
@@ -119,6 +126,12 @@ class Renderable3D(BaseComponent):
                     )
         )
         glNamedBufferSubData(self.ubo, 0, self.matrix.nbytes, self.matrix)
+
+
+class RoomComponent(BaseComponent):
+    def __init__(self):
+        super().__init__()
+
 
 
 class TileData(BaseComponent):

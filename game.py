@@ -1,4 +1,3 @@
-
 from PyQt6 import QtWidgets, QtOpenGLWidgets
 from PyQt6.QtCore import QTimer, Qt
 from PyQt6.QtGui import QSurfaceFormat
@@ -10,6 +9,8 @@ from texture import Texture
 from gameevents import *
 import sys
 import os
+import pickle
+import gzip
 from camera import Camera
 from mesh import Mesh
 
@@ -63,6 +64,8 @@ class Game(QtOpenGLWidgets.QOpenGLWidget):
         self.timers["fixed_step"].setInterval(50)
         self.timers["fixed_step"].start()
 
+        self.current_room = 0
+
         self.show()
 
 
@@ -96,10 +99,6 @@ class Game(QtOpenGLWidgets.QOpenGLWidget):
     def initializeGL(self) -> None:
         glEnable(GL_DEPTH_TEST)
         glEnable(GL_MULTISAMPLE)
-        '''glEnable(GL_LINE_SMOOTH)
-        glEnable(GL_BLEND)
-        glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA)
-        glHint(GL_LINE_SMOOTH_HINT,GL_NICEST)'''
         glClearColor(0, 0, 0, 0)
 
         self.camera = Camera()
@@ -111,6 +110,9 @@ class Game(QtOpenGLWidgets.QOpenGLWidget):
         self.loadTextures()
 
         # Load models
+        self.loadModels()
+
+        ###OLD###
         model_path = "res/models"
         for file in [os.path.join(model_path, file) for file in os.listdir(model_path) if os.path.isfile(os.path.join(model_path, file))]:
             Mesh.fromFile(self,file)
@@ -208,36 +210,21 @@ class Game(QtOpenGLWidgets.QOpenGLWidget):
     def loadTextures(self) -> None:
         model_path = "res/textures"
         for file in [f"{model_path}/{file}" for file in os.listdir(model_path) if os.path.isfile(f"{model_path}/{file}")]:
-
-            '''
-            # Extremly painful QImage->np.array
-            image = QImage(file)
-            qbytes = QByteArray()
-            buffer = QBuffer(qbytes)
-            buffer.open(QIODevice.OpenModeFlag.WriteOnly)
-            image.save(buffer, "PNG")
-            arr = np.frombuffer(qbytes, np.uint8)
-
-            # Now np.array->openGL
-            tex = glGenTextures(1)
-            glBindTexture(GL_TEXTURE_2D,tex)
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.width(), image.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, arr)
-            glGenerateMipmap(GL_TEXTURE_2D)
-            glBindTexture(GL_TEXTURE_2D, 0)
-
-            self.textures[file] = tex
-            '''
-
-            '''
-            image = QtOpenGL.QOpenGLTexture(QImage(file).mirrored())
-            self.textures[file] = image.textureId()
-            self.qimages.append(image)
-            '''
             self.textures[file] = Texture.fromFile(file)
+
+    def loadModels(self):
+        model_path = "res/models"
+        for fname in [os.path.join(model_path, fname) for fname in os.listdir(model_path) if os.path.isfile(os.path.join(model_path, fname))]:
+            if fname.endswith(".p3d.gz"):
+                with gzip.open(fname) as file:
+                    contents = pickle.load(file)
+                    for mesh in contents.get("meshes", []):
+                        self.meshes[mesh["info"]["name"]] = Mesh.fromDict(self, mesh)
+                    for animation in contents.get("animations", []):
+                        #Animation.fromDict(animation)
+                        print(animation["meta"]["name"])
+
+
 
 
 import cProfile, pstats
