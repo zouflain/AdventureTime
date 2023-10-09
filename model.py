@@ -3,12 +3,10 @@ from OpenGL.GL import *
 import numpy as np
 import json as JSON
 
-
 class Mesh:
-    def __init__(self, verts: np.array, shader: int, texture: int):
+    def __init__(self, verts: np.array, texture: int):
 
         # Generate OpenGL Data
-        self.shader = shader
         self.verts = verts
         self.nverts = verts.size
         self.texture = texture
@@ -24,7 +22,6 @@ class Mesh:
     def fromDict(game, data: dict) -> Mesh:
         return Mesh(
             texture=game.getTexture(data["info"]["texture"]),
-            shader=game.shaders.get(data["info"]["shader"], 0),
             verts=np.array(
                 [
                     (
@@ -50,7 +47,7 @@ class Mesh:
         )
 
 
-
+    '''
     @staticmethod
     def fromFile(game, fname: str) -> bool:
         success = False
@@ -72,7 +69,6 @@ class Mesh:
                     )
                     mesh = Mesh(
                         texture=game.getTexture(json_mesh["info"]["texture"]),
-                        shader=game.shaders.get(json_mesh["info"]["shader"], 0),
                         verts=np.array(
                             [
                                 (
@@ -92,6 +88,7 @@ class Mesh:
         except:
             pass
         return success
+        '''
 
     def preRender(self):
         glBindTexture(GL_TEXTURE_2D, self.texture)
@@ -100,3 +97,72 @@ class Mesh:
     def render(self):
         glDrawArrays(GL_TRIANGLES, 0, self.nverts)
 
+
+class Armature:
+    def __init__(self, animations: dict, bind_list: list):
+        self.animations = animations
+        self.bind_bones = np.array(
+            [
+                (
+                    bone["quat"],
+                    bone["pos"]
+                ) for bone in bind_list
+            ],
+            dtype=Animation.BONE_TYPE
+        )
+        buffers = np.zeros(1, dtype=np.uint)
+        glCreateBuffers(1, buffers)
+        self.bind_ssbo = buffers[0]
+        glNamedBufferData(self.bind_ssbo, self.bind_bones.nbytes, self.bind_bones, GL_STATIC_DRAW)
+
+
+class Animation:
+    MAX_BONES = 200
+    BONE_TYPE = np.dtype(
+        [
+            ("quat", (np.float32, 4)),
+            ("pos", (np.float32, 3))
+        ]
+    )
+    RENDER_BONE_TYPE = np.dtype(
+        [
+            ("rotation", (np.float32, 9)),
+            ("translation", (np.float32, 3)),
+            ("bind_pos", (np.float32, 3))
+        ]
+    )
+
+    def __init__(self, bind_bones: np.array, frames: list[dict]):
+        self.bind_bones = bind_bones
+        self.frames = frames
+        size = len(frames)
+        buffers = np.zeros(size, dtype=np.uint)
+        glCreateBuffers(size, buffers)
+        for i, frame in enumerate(frames):
+            frame["ssbo"] = buffers[i]
+            bones = frame["bones"]
+            glNamedBufferData(buffers[i], len(bones)*self.BONE_TYPE.itemsize, bones, GL_STATIC_DRAW)
+
+    def compute(self, ssbo: int) -> None:
+        pass
+
+    @classmethod
+    def fromDict(cls, game, data: dict) -> Animation:
+        frames = []
+        for f_data in data["keyframes"]:
+            frames.append(
+                {
+                    "frame": f_data["start"],
+                    "bones": np.array(
+                        [(bone["quat"], bone["pos"]) for bone in f_data["bones"]],
+                        dtype=cls.BONE_TYPE
+                    )
+                }
+            )
+        return Animation(
+            frames=frames,
+            bind_bones=np.array(
+                [(bone["quat"], bone["pos"]) for bone in f_data["bones"]],
+                dtype=cls.BONE_TYPE
+            )
+        )

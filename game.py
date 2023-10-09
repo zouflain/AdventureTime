@@ -12,16 +12,17 @@ import os
 import pickle
 import gzip
 from camera import Camera
-from mesh import Mesh
-
-from OpenGL.GL import *
+from model import Mesh, Armature
 from OpenGL.GL.shaders import compileProgram, compileShader
 
 from intelligence import *
 from levelgeneration import LevelGenerator
 from components import *
 
+
 frames = 0
+
+
 class Game(QtOpenGLWidgets.QOpenGLWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -47,8 +48,9 @@ class Game(QtOpenGLWidgets.QOpenGLWidget):
         self.listeners = {}
         self.systems = [Renderer(self), InteractionSystem(), CameraSystem(self)]
 
-        self.camera = None
+        self.camera = None #must initialize after openGL
         self.meshes = {}
+        self.armatures = {}
         self.shaders = {}
         self.textures = {}
         self.qimages = []  # Absolute hackish way to preserve qimage objects...
@@ -75,7 +77,7 @@ class Game(QtOpenGLWidgets.QOpenGLWidget):
             group="base",
             actions={
                 "test": ActionTemplate(
-                    target_type=TargetType([Renderable3D]),
+                    target_type=TargetType([RenderableDynamic]),
                     weight=10.0,
                     considerations=[Consideration(), Consideration(), ConsiderRejectSelf()]
                 )
@@ -101,44 +103,29 @@ class Game(QtOpenGLWidgets.QOpenGLWidget):
         glEnable(GL_MULTISAMPLE)
         glClearColor(0, 0, 0, 0)
 
-        self.camera = Camera()
-
-        self.loadShader("res/shaders/triangle")
-        self.loadShader("res/shaders/sobeledge")
-
-        # Load Textures (BEFORE models!)
-        self.loadTextures()
-
-        # Load models
+        self.loadShaders()
+        self.loadTextures()  # Load Textures (BEFORE models!)
         self.loadModels()
 
-        ###OLD###
-        model_path = "res/models"
-        for file in [os.path.join(model_path, file) for file in os.listdir(model_path) if os.path.isfile(os.path.join(model_path, file))]:
-            Mesh.fromFile(self,file)
 
-
+        self.camera = Camera()
         wres = self.getConfigProp("window", "resolution")
         self.camera.setOrtho(0,wres[0],0,wres[1],-10000,10000)
 
 
         #############TEST CODE###################
-        level = LevelGenerator(25, 25)
+        #level = LevelGenerator(10, 10)
 
         EntityManager.addComponents(
             components=[
-                Renderable3D(meshes=["peasant_1"])
-            ]
-        )
-
-        EntityManager.addComponents(
-            components=[
-                Renderable3D(
-                    meshes=["Sphere"],
-                    position=np.array((-200, -200, -50), dtype=np.float32)
+                RenderableDynamic(
+                    meshes=["Mage_Head"],
+                    position=np.array((0, 0, 0), dtype=np.float32),
+                    armature="Rig"
                 )
             ]
         )
+        print(self.meshes)
 
 
         source = LightSource(
@@ -192,19 +179,28 @@ class Game(QtOpenGLWidgets.QOpenGLWidget):
         texture = self.textures.get(name, None)
         return 0 if not texture else texture.gl_tex
 
-    def loadShader(self, name: str):
-        try:
-            with open(name+".vert") as vert_file:
-                with open(name+".frag") as frag_file:
-                    vert_src = vert_file.read()
-                    frag_src = frag_file.read()
-                    self.shaders[name] = compileProgram(
-                        compileShader(vert_src, GL_VERTEX_SHADER),
-                        compileShader(frag_src, GL_FRAGMENT_SHADER)
-                    )
-        except Exception as err:
-            print(err)
-            pass #should log this...
+    def loadShaders(self):
+        shader_path = "res/shaders"
+        for file in [f"{shader_path}/{file}" for file in os.listdir(shader_path) if os.path.isfile(f"{shader_path}/{file}")]:
+            name = file[:-5]
+            try:
+                if file.endswith(".vert"):
+                    with open(name+".vert") as vert_file:
+                        with open(name+".frag") as frag_file:
+                            vert_src = vert_file.read()
+                            frag_src = frag_file.read()
+                            self.shaders[name] = compileProgram(
+                                compileShader(vert_src, GL_VERTEX_SHADER),
+                                compileShader(frag_src, GL_FRAGMENT_SHADER)
+                            )
+                elif file.endswith(".comp"):
+                    with open(file) as comp_file:
+                        self.shaders[name] = compileProgram(
+                            compileShader(comp_file.read(), GL_COMPUTE_SHADER)
+                        )
+            except Exception as err:
+                print("Error loading shader:", err)
+
 
 
     def loadTextures(self) -> None:
@@ -220,9 +216,12 @@ class Game(QtOpenGLWidgets.QOpenGLWidget):
                     contents = pickle.load(file)
                     for mesh in contents.get("meshes", []):
                         self.meshes[mesh["info"]["name"]] = Mesh.fromDict(self, mesh)
-                    for animation in contents.get("animations", []):
-                        #Animation.fromDict(animation)
-                        print(animation["meta"]["name"])
+                    for armature in contents.get("armatures"):
+                        animations = {}
+                        for animation in armature.get("animations", []):
+                            animations[animation["info"]["name"]] = Animation.fromDict(self, animation)
+                        a_data = Armature(animations=animations, bind_list=armature["bones"])
+                        self.armatures[armature["info"]["name"]] = a_data
 
 
 

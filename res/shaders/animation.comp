@@ -1,0 +1,91 @@
+#version 450
+
+layout(local_size_x = 1, local_size_y = 1) in;
+
+layout(location=0) uniform float t; //interpolation factor
+
+struct Bone{
+    vec4 quat;
+    float pos[3];
+};
+layout(std430, binding = 0) buffer BindBones{
+  Bone bbones[];
+};
+layout(std430, binding = 1) buffer PrevBones{
+  Bone pbones[];
+};
+layout(std430, binding = 2) buffer NextBones{
+  Bone nbones[];
+};
+
+struct RenderBone{
+    float rotation[9];
+    float bind_pos[3];
+    float translation[3];
+};
+layout(std430, binding = 3) buffer Out{
+    RenderBone rbones[];
+};
+
+mat3 qtomat(vec4 q){
+    mat3 m;
+
+    m[0][0] = 1 - 2*q.y*q.y - 2*q.z*q.z;
+    m[0][1] = 2*q.x*q.y - 2*q.z*q.w;
+    m[0][2] = 2*q.x*q.z + 2*q.y*q.w;
+
+    m[1][0] = 2*q.x*q.y + 2*q.z*q.w;
+    m[1][1] = 1 - 2*q.x*q.x - 2*q.z*q.z;
+    m[1][2] = 2*q.y*q.z - 2*q.z*q.w;
+
+    m[2][0] = 2*q.x*q.z - 2*q.y*q.w;
+    m[2][1] = 2*q.y*q.z + 2*q.x*q.w;
+    m[2][2] = 1 - 2*q.x*q.x - 2*q.y*q.y;
+
+    return m;
+}
+
+vec4 qnorm(vec4 q){
+    float len = q.length();
+    return len > 0 ? q/len : q;
+}
+
+vec4 qslerp(vec4 qa, vec4 qb, float interp){
+    float omega = acos(dot(qnorm(qa), qnorm(qb)));
+    float a = 1;
+    float b = 0;
+    if (omega > 0){
+        a = sin((1.0-interp)*omega)/sin(omega);
+        b = sin(interp*omega)/sin(omega);
+    }
+    return a*qa+b*qb;
+}
+
+void main(){
+    uint index = gl_LocalInvocationIndex;
+
+    //Slerp and convert to matrix
+    mat3 rotation = qtomat(qnorm(qslerp(pbones[index].quat, nbones[index].quat, t)));
+
+    //store render rotation
+    for(int i=0;i<9;i++){
+        rbones[index].rotation[i] = rotation[i/3][i%3];
+    }
+
+    //store render translation and bind pos
+    for(int i=0;i<3;i++){
+        rbones[index].translation[i] = pbones[index].pos[i]*t+nbones[index].pos[i]*(1.0-t);
+        rbones[index].bind_pos[i] = bbones[index].pos[i];
+    }
+
+
+    for(int i=0;i<3;i++){
+        rbones[index].translation[i] = 0;
+        rbones[index].bind_pos[i] = 0;//bbones[index].pos[i];
+    }
+    rotation = mat3(1.0f);
+    for(int i=0;i<9;i++){
+        rbones[index].rotation[i] = rotation[i/3][i%3];
+    }
+
+}

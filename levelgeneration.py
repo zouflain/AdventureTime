@@ -1,5 +1,5 @@
 from entity import EntityManager
-from components import TileData, Renderable3D
+from components import *
 import numpy as np
 
 class Room:
@@ -30,7 +30,7 @@ class LevelGenerator:
             EntityManager.addComponents(
                 components=[
                     TileData(),
-                    Renderable3D(
+                    RenderableDynamic(
                         meshes=["Cube"],
                         position=np.array((x*50,y*50,0),dtype=np.float32)
                     )
