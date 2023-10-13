@@ -58,7 +58,8 @@ class Game(QtOpenGLWidgets.QOpenGLWidget):
         self.timers = {}
         self.timers["render"] = QTimer()
         self.timers["render"].timeout.connect(self.update)
-        self.timers["render"].setInterval(8)
+        #self.timers["render"].setInterval(8)
+        self.timers["render"].setInterval(33)
         self.timers["render"].start()
 
         self.timers["fixed_step"] = QTimer()
@@ -116,21 +117,39 @@ class Game(QtOpenGLWidgets.QOpenGLWidget):
         #############TEST CODE###################
         #level = LevelGenerator(10, 10)
 
-        EntityManager.addComponents(
-            components=[
-                RenderableDynamic(
-                    meshes=["Mage_Head"],
-                    position=np.array((0, 0, 0), dtype=np.float32),
+        renderable = RenderableDynamic(
+                    meshes=["Mage_Head", "Mage_ArmLeft", "Mage_ArmRight", "Mage_Body", "Mage_LegLeft", "Mage_LegRight"], #, "Mage_Cape", "Mage_Hat"
+                    position=np.array((600, 0, 0), dtype=np.float32),
                     armature="Rig"
                 )
+        #renderable.animation = "Block_Hit_Rig"
+        renderable.animation = "Death_A_Rig"
+        #renderable.animation = "T-Pose_Rig"
+        #renderable.animation = "1H_Melee_Attack_Chop_Rig"
+        print([animation for animation in self.armatures["Rig"].animations])
+        EntityManager.addComponents(
+            components=[
+                renderable
             ]
         )
-        print(self.meshes)
 
+        '''
+        renderable = RenderableDynamic(
+                    meshes=["Box"],
+                    position=np.array((0, 0, 0), dtype=np.float32),
+                    armature="Angle"
+                )
+        #renderable.animation = "Death_A_Rig"
+        EntityManager.addComponents(
+            components=[
+                renderable
+            ]
+        )
+        '''
 
         source = LightSource(
             np.array((-1000, -1000, 10000)),
-            np.array((0.2, 0.2, 0.2)),
+            np.array((0.5, 0.5, 0.5)),
             np.array((0.5, 0.5, 0.5))
         )
         EntityManager.addComponents(
@@ -156,7 +175,7 @@ class Game(QtOpenGLWidgets.QOpenGLWidget):
                 listeners.remove(listener)
 
 
-    def eventBroadcast(self, event: GameEvent):
+    def eventBroadcast(self, event: GameEvent) -> None:
         for listener in self.listeners.get(type(event), []):
             if listener.execute(self, event):
                 break
@@ -172,7 +191,7 @@ class Game(QtOpenGLWidgets.QOpenGLWidget):
     def getCamera(self) -> Camera:
         return self.camera
 
-    def getMesh(self, name: str):
+    def getMesh(self, name: str) -> Mesh:
         return self.meshes.get(name, None)
 
     def getTexture(self, name: str) -> int:

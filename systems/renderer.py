@@ -29,24 +29,34 @@ class Renderer(BaseSystem):
 
         return False
 
-    def computeBones(self, game, renderables, coef):
+    def computeBones(self, game, renderables: list[RenderableDynamic], coef):
         glUseProgram(game.shaders.get("res/shaders/animation", 0))
         glUniform1f(0, coef)
         for renderable in renderables:
             armature = game.armatures.get(renderable.armature, None)
             if armature:
                 glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, armature.bind_ssbo)
-                if renderable.animation:
-                    pass
+                if renderable.animation and renderable.animation in armature.animations:
+                    self.animateRenderable(renderable, armature.animations[renderable.animation])
                 else: # use the bind pose as both previous and next frame
                     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, armature.bind_ssbo)
                     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, armature.bind_ssbo)
                 glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, renderable.animation_ssbo)
-                glDispatchCompute(20, 10, 1)
+                glDispatchCompute(1, 1, 1)
                 glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT)
+
         glUseProgram(0)
 
-    def bindLights(self):
+    def animateRenderable(self, renderable: RenderableDynamic, animation: Animation) -> None:
+        current_frame = renderable.next_frame
+        renderable.next_frame += 1
+        if renderable.next_frame >= animation.length:
+            current_frame = 0
+            renderable.next_frame = 1
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, animation.frames[current_frame]["ssbo"])
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, animation.frames[renderable.next_frame]["ssbo"])
+
+    def bindLights(self) -> None:
         if not self.lights_ubo:
             arr = np.zeros(1, dtype=np.uint)
             glCreateBuffers(1, arr)
@@ -69,7 +79,7 @@ class Renderer(BaseSystem):
         )
         glNamedBufferSubData(self.lights_ubo, 0, light_data.nbytes, light_data)
 
-    def renderDynamicGroups(self, game, camera, renderables):
+    def renderDynamicGroups(self, game, camera, renderables: list[RenderableDynamic]) -> None:
         shader = game.shaders.get("res/shaders/mesh", 0)
         glUseProgram(shader)
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, self.lights_ubo)

@@ -33,5 +33,5 @@ class CameraSystem(BaseSystem):
         elif mouse_pos[1] >= wres[1] - self.WINDOW_SCROLL_MARGIN:
             change[1] = self.WINDOW_SCROLL_SPEED*(1-((wres[1]-mouse_pos[1])/self.WINDOW_SCROLL_MARGIN))
 
-        game.camera.pan(-np.cos(theta)*change[0], -np.sin(theta)*change[1], 0)
+        #game.camera.pan(-np.cos(theta)*change[0], -np.sin(theta)*change[1], 0)
         return False

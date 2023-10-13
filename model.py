@@ -110,6 +110,7 @@ class Armature:
             ],
             dtype=Animation.BONE_TYPE
         )
+        self.nbones = len(bind_list)
         buffers = np.zeros(1, dtype=np.uint)
         glCreateBuffers(1, buffers)
         self.bind_ssbo = buffers[0]
@@ -126,18 +127,18 @@ class Animation:
     )
     RENDER_BONE_TYPE = np.dtype(
         [
-            ("rotation", (np.float32, 9)),
             ("translation", (np.float32, 3)),
-            ("bind_pos", (np.float32, 3))
+            ("bind_pos", (np.float32, 3)),
+            ("quat", (np.float32, 4))
         ]
     )
 
     def __init__(self, bind_bones: np.array, frames: list[dict]):
         self.bind_bones = bind_bones
         self.frames = frames
-        size = len(frames)
-        buffers = np.zeros(size, dtype=np.uint)
-        glCreateBuffers(size, buffers)
+        self.length = len(frames)
+        buffers = np.zeros(self.length, dtype=np.uint)
+        glCreateBuffers(self.length, buffers)
         for i, frame in enumerate(frames):
             frame["ssbo"] = buffers[i]
             bones = frame["bones"]
@@ -166,3 +167,27 @@ class Animation:
                 dtype=cls.BONE_TYPE
             )
         )
+
+
+class AnimationState:
+    def __init__(self, is_looping: bool, end_frame: int):
+        self.is_looping = is_looping
+        self.end_frame = end_frame
+
+    def isFinished(self, frame: int) -> bool:
+        return self.is_looping or frame > self.end_frame
+
+
+
+
+class AnimationController:
+    def __init__(self):
+        self.state = None
+
+    def pushSignal(self, signal: str):
+        pass
+
+    def update(self, frame: int):
+        finished = True
+        if self.state:
+            finished = self.state.isFinished(frame)

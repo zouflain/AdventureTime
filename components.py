@@ -131,7 +131,7 @@ class RenderableDynamic(Renderable):
     def __init__(self, position: np.array = np.zeros(3, dtype=np.float32), meshes: list[str] = [], armature: str = "Default"):
         super().__init__(position, meshes)
         self.animation = None
-        self.next_frame = 1
+        self.next_frame = 0
         self.armature = armature
 
         arr = np.zeros(1, dtype=np.uint)
@@ -214,10 +214,3 @@ class RoomComponent(BaseComponent):
 class TileData(BaseComponent):
     def __init__(self):
         super().__init__()
-
-
-class WorldPosition(BaseComponent):
-    def __init__(self, current: np.array = None, previous: np.array = None):
-        super().__init__()
-        self.current = current
-        self.previous = previous

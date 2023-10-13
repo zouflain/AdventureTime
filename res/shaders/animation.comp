@@ -1,11 +1,11 @@
 #version 450
 
-layout(local_size_x = 1, local_size_y = 1) in;
+layout(local_size_x = 20, local_size_y = 10) in;
 
 layout(location=0) uniform float t; //interpolation factor
 
 struct Bone{
-    vec4 quat;
+    float quat[4];
     float pos[3];
 };
 layout(std430, binding = 0) buffer BindBones{
@@ -19,15 +19,16 @@ layout(std430, binding = 2) buffer NextBones{
 };
 
 struct RenderBone{
-    float rotation[9];
     float bind_pos[3];
     float translation[3];
+    float quat[4];
 };
 layout(std430, binding = 3) buffer Out{
     RenderBone rbones[];
 };
-
-mat3 qtomat(vec4 q){
+/*
+mat3 qtomat(vec4 qin){
+    vec4 q = normalize(qin);
     mat3 m;
 
     m[0][0] = 1 - 2*q.y*q.y - 2*q.z*q.z;
@@ -36,41 +37,72 @@ mat3 qtomat(vec4 q){
 
     m[1][0] = 2*q.x*q.y + 2*q.z*q.w;
     m[1][1] = 1 - 2*q.x*q.x - 2*q.z*q.z;
-    m[1][2] = 2*q.y*q.z - 2*q.z*q.w;
+    m[1][2] = 2*q.y*q.z - 2*q.x*q.w;
 
     m[2][0] = 2*q.x*q.z - 2*q.y*q.w;
     m[2][1] = 2*q.y*q.z + 2*q.x*q.w;
     m[2][2] = 1 - 2*q.x*q.x - 2*q.y*q.y;
 
     return m;
+}*/
+
+vec4 qslerp(vec4 qa, vec4 qb, float coef){
+    vec4 nqa = normalize(qa);
+    vec4 nqb = normalize(qb);
+    float omega = acos(dot(nqa, nqb));
+    bool cond = omega>1e-10;
+    float a = mix(1.0f, sin((1.0f-coef)*omega)/sin(omega), cond);
+    float b = mix(0.f, sin(coef*omega)/sin(omega), cond);
+    return a*nqa+b*nqb;
 }
 
-vec4 qnorm(vec4 q){
-    float len = q.length();
-    return len > 0 ? q/len : q;
+vec4 qcross(vec4 qa, vec4 qb){
+    return vec4(
+        qb.w*qa.x + qb.x*qa.w - qb.y*qa.z + qb.z*qa.y,
+        qb.w*qa.y + qb.x*qa.z + qb.y*qa.w - qb.z*qa.x,
+        qb.w*qa.z - qb.x*qa.y + qb.y*qa.x + qb.z*qa.w,
+        qb.w*qa.w - qb.x*qa.x - qb.y*qa.y - qb.z*qa.z
+    );
 }
 
-vec4 qslerp(vec4 qa, vec4 qb, float interp){
-    float omega = acos(dot(qnorm(qa), qnorm(qb)));
-    float a = 1;
-    float b = 0;
-    if (omega > 0){
-        a = sin((1.0-interp)*omega)/sin(omega);
-        b = sin(interp*omega)/sin(omega);
+vec4 qconj(vec4 qa){
+    return vec4(-qa.xyz,qa.w);
+}
+
+vec4 qinv(vec4 qa){
+    float s = dot(qa,qa);
+    if (s > 1e-10){
+        return qconj(qa)/s;
     }
-    return a*qa+b*qb;
+    return qa;
 }
 
+vec3 qrotate(vec3 v, vec4 q){
+    return qcross(qcross(q,vec4(v,0)),qinv(q)).xyz;
+}
 void main(){
     uint index = gl_LocalInvocationIndex;
 
     //Slerp and convert to matrix
-    mat3 rotation = qtomat(qnorm(qslerp(pbones[index].quat, nbones[index].quat, t)));
-
-    //store render rotation
-    for(int i=0;i<9;i++){
-        rbones[index].rotation[i] = rotation[i/3][i%3];
-    }
+    vec4 qa = vec4(
+        pbones[index].quat[0],
+        pbones[index].quat[1],
+        pbones[index].quat[2],
+        pbones[index].quat[3]
+    );
+    vec4 qb = vec4(
+        nbones[index].quat[0],
+        nbones[index].quat[1],
+        nbones[index].quat[2],
+        nbones[index].quat[3]
+    );
+    vec4 qbind = vec4(
+            bbones[index].quat[0],
+            bbones[index].quat[1],
+            bbones[index].quat[2],
+            bbones[index].quat[3]
+    );
+    vec4 qs = qslerp(qa,qb,t);
 
     //store render translation and bind pos
     for(int i=0;i<3;i++){
@@ -78,14 +110,9 @@ void main(){
         rbones[index].bind_pos[i] = bbones[index].pos[i];
     }
 
-
-    for(int i=0;i<3;i++){
-        rbones[index].translation[i] = 0;
-        rbones[index].bind_pos[i] = 0;//bbones[index].pos[i];
-    }
-    rotation = mat3(1.0f);
-    for(int i=0;i<9;i++){
-        rbones[index].rotation[i] = rotation[i/3][i%3];
-    }
-
+    vec4 quat = qcross(qbind, qs);
+    rbones[index].quat[0] = quat.x;
+    rbones[index].quat[1] = quat.y;
+    rbones[index].quat[2] = quat.z;
+    rbones[index].quat[3] = quat.w;
 }

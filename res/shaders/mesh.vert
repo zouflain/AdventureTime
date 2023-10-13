@@ -24,9 +24,9 @@ layout(binding = 3, std430) buffer Verts{
 };
 
 struct RenderBone{
-    float rotation[9];
     float bind_pos[3];
     float translation[3];
+    float quat[4];
 };
 layout(std430, binding = 4) buffer Bones{
     RenderBone bones[];
@@ -35,6 +35,31 @@ layout(std430, binding = 4) buffer Bones{
 out vec2 uv_coords;
 out vec3 frag_normal;
 out vec3 frag_pos;
+
+vec4 qcross(vec4 qa, vec4 qb){
+    return vec4(
+        qb.w*qa.x + qb.x*qa.w - qb.y*qa.z + qb.z*qa.y,
+        qb.w*qa.y + qb.x*qa.z + qb.y*qa.w - qb.z*qa.x,
+        qb.w*qa.z - qb.x*qa.y + qb.y*qa.x + qb.z*qa.w,
+        qb.w*qa.w - qb.x*qa.x - qb.y*qa.y - qb.z*qa.z
+    );
+}
+
+vec4 qconj(vec4 qa){
+    return vec4(-qa.xyz,qa.w);
+}
+
+vec4 qinv(vec4 qa){
+    float s = dot(qa,qa);
+    if (s > 1e-10){
+        return qconj(qa)/s;
+    }
+    return qa;
+}
+
+vec3 qrotate(vec3 v, vec4 q){
+    return qcross(qcross(q,vec4(v,0)),qinv(q)).xyz;
+}
 
 void main(){
     uv_coords = v_data[gl_VertexID].uvs;
@@ -58,32 +83,21 @@ void main(){
                 bones[index].bind_pos[1],
                 bones[index].bind_pos[2]
         );
-        vec3 offset = v_bind; - b_bind;
+        vec3 offset = v_bind - b_bind;
         vec3 b_pos = vec3(
                 bones[index].translation[0],
                 bones[index].translation[1],
                 bones[index].translation[2]
         );
-        mat3 m_rotation;
-        for(int j=0;j<9;j++){
-            m_rotation[j/3][j%3] = bones[index].rotation[j];
-        }
-        v_pos += (b_pos+(offset*m_rotation))*weight;
-        v_norm += m_rotation*v_bind_norm*weight;
+        vec4 q_rotation = vec4(
+            bones[index].quat[0],
+            bones[index].quat[1],
+            bones[index].quat[2],
+            bones[index].quat[3]
+        );
+        v_pos += (b_pos+qrotate(offset,q_rotation))*weight;
+        v_norm += qrotate(v_bind_norm,q_rotation)*weight;
     }
-    /*
-    /////////////////////
-    vec3 normal = vec3(
-        v_data[gl_VertexID].normal[0],
-        v_data[gl_VertexID].normal[1],
-        v_data[gl_VertexID].normal[2]
-    );
-    frag_normal = normal*mat3(model);
-    frag_pos = (vec4(v_bind,1) * model).xyz;
-    gl_Position = vec4(v_bind,1) * model * view * projection;
-    ///////////////////////
-    */
-
     frag_normal = v_norm*mat3(model);
     frag_pos = (vec4(v_pos,1) * model).xyz;
     gl_Position = vec4(v_pos,1) * model * view * projection;
