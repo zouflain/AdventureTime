@@ -118,11 +118,11 @@ class Game(QtOpenGLWidgets.QOpenGLWidget):
         #level = LevelGenerator(10, 10)
 
         renderable = RenderableDynamic(
-                    meshes=["Mage_Head", "Mage_ArmLeft", "Mage_ArmRight", "Mage_Body", "Mage_LegLeft", "Mage_LegRight"], #, "Mage_Cape", "Mage_Hat"
+                    meshes=["Mage_Head", "Mage_ArmLeft", "Mage_ArmRight", "Mage_Body", "Mage_LegLeft", "2H_Staff", "Mage_Hat", "Mage_LegRight"], #, "Mage_Cape"
                     position=np.array((600, 0, 0), dtype=np.float32),
                     armature="Rig"
                 )
-        #renderable.animation = "Block_Hit_Rig"
+        #renderable.animation = "Hit_A_Rig"
         renderable.animation = "Death_A_Rig"
         #renderable.animation = "T-Pose_Rig"
         #renderable.animation = "1H_Melee_Attack_Chop_Rig"
@@ -257,6 +257,7 @@ def main():
     app = QtWidgets.QApplication(sys.argv)
     game = Game()
     sys.exit(app.exec())
+
 
 if __name__ == "__main__":
     cProfile.run("main()", filename="profile.prof")

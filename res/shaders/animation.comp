@@ -46,15 +46,6 @@ mat3 qtomat(vec4 qin){
     return m;
 }*/
 
-vec4 qslerp(vec4 qa, vec4 qb, float coef){
-    vec4 nqa = normalize(qa);
-    vec4 nqb = normalize(qb);
-    float omega = acos(dot(nqa, nqb));
-    bool cond = omega>1e-10;
-    float a = mix(1.0f, sin((1.0f-coef)*omega)/sin(omega), cond);
-    float b = mix(0.f, sin(coef*omega)/sin(omega), cond);
-    return a*nqa+b*nqb;
-}
 
 vec4 qcross(vec4 qa, vec4 qb){
     return vec4(
@@ -71,14 +62,21 @@ vec4 qconj(vec4 qa){
 
 vec4 qinv(vec4 qa){
     float s = dot(qa,qa);
-    if (s > 1e-10){
-        return qconj(qa)/s;
-    }
-    return qa;
+    return s > 1e-10 ? qconj(qa)/s : qa;
 }
 
 vec3 qrotate(vec3 v, vec4 q){
     return qcross(qcross(q,vec4(v,0)),qinv(q)).xyz;
+}
+
+vec4 qslerp(vec4 qa, vec4 qb, float coef){
+    vec4 nqa = normalize(qa);
+    vec4 nqb = normalize(qb);
+    float omega = acos(dot(nqa, nqb));
+    bool cond = omega>1e-10;
+    float a = mix(1.0f, sin((1.0f-coef)*omega)/sin(omega), cond);
+    float b = mix(0.f, sin(coef*omega)/sin(omega), cond);
+    return a*nqa+b*nqb;
 }
 void main(){
     uint index = gl_LocalInvocationIndex;
@@ -110,7 +108,7 @@ void main(){
         rbones[index].bind_pos[i] = bbones[index].pos[i];
     }
 
-    vec4 quat = qcross(qbind, qs);
+    vec4 quat = qcross(qs,qbind);
     rbones[index].quat[0] = quat.x;
     rbones[index].quat[1] = quat.y;
     rbones[index].quat[2] = quat.z;

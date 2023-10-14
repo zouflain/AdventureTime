@@ -3,17 +3,36 @@ from OpenGL.GL import *
 import numpy as np
 import json as JSON
 
+
 class Mesh:
-    def __init__(self, verts: np.array, texture: int):
+    def __init__(self, game, verts: np.array, info: dict):
 
         # Generate OpenGL Data
         self.verts = verts
         self.nverts = verts.size
-        self.texture = texture
-        arr = np.zeros(1, dtype=np.uint)
-        glCreateBuffers(1, arr)
+        self.texture = game.getTexture(info.get("texture", None))
+        arr = np.zeros(2, dtype=np.uint)
+        glCreateBuffers(2, arr)
         self.ssbo = arr[0]
+        self.parent_ssbo = arr[1]
+        parent_data = np.array(
+            [
+                (
+                    info.get("parent_bone", -1),
+                    info.get("transform", (0, 0, 0)),
+                    info.get("quat", (0, 0, 0, 1))
+                )
+            ],
+            dtype=[
+                ("ind", np.int32),
+                ("pos", (np.float32, 3)),
+                ("quat", (np.float32, 4))
+            ]
+        )
         glNamedBufferStorage(self.ssbo, verts.nbytes, verts, 0)
+        glNamedBufferStorage(self.parent_ssbo, parent_data.nbytes, parent_data, 0)
+        if info["parent_bone"] != -1:
+            print(info["name"], info["transform"])
 
         #Cleanup
         glUseProgram(0)
@@ -21,7 +40,7 @@ class Mesh:
     @staticmethod
     def fromDict(game, data: dict) -> Mesh:
         return Mesh(
-            texture=game.getTexture(data["info"]["texture"]),
+            game,
             verts=np.array(
                 [
                     (
@@ -43,7 +62,8 @@ class Mesh:
                         ("color", (np.float32, 4))
                     ]
                 )
-            )
+            ),
+            info=data["info"]
         )
 
 
@@ -93,6 +113,7 @@ class Mesh:
     def preRender(self):
         glBindTexture(GL_TEXTURE_2D, self.texture)
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, self.ssbo)
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, self.parent_ssbo)
 
     def render(self):
         glDrawArrays(GL_TRIANGLES, 0, self.nverts)
