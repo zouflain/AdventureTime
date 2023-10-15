@@ -73,9 +73,11 @@ vec4 qslerp(vec4 qa, vec4 qb, float coef){
     vec4 nqa = normalize(qa);
     vec4 nqb = normalize(qb);
     float omega = acos(dot(nqa, nqb));
-    bool cond = omega>1e-10;
+    bool cond = omega>1e-15;/*
     float a = mix(1.0f, sin((1.0f-coef)*omega)/sin(omega), cond);
-    float b = mix(0.f, sin(coef*omega)/sin(omega), cond);
+    float b = mix(0.f, sin(coef*omega)/sin(omega), cond);*/
+    float a = mix(1.0f-coef, sin((1.0f-coef)*omega)/sin(omega), cond);
+    float b = mix(coef, sin(coef*omega)/sin(omega), cond);
     return a*nqa+b*nqb;
 }
 void main(){
@@ -100,7 +102,7 @@ void main(){
             bbones[index].quat[2],
             bbones[index].quat[3]
     );
-    vec4 qs = qslerp(qa,qb,t);
+    vec4 qs = qslerp(qa,qb,0.7);
 
     //store render translation and bind pos
     for(int i=0;i<3;i++){

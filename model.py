@@ -31,8 +31,6 @@ class Mesh:
         )
         glNamedBufferStorage(self.ssbo, verts.nbytes, verts, 0)
         glNamedBufferStorage(self.parent_ssbo, parent_data.nbytes, parent_data, 0)
-        if info["parent_bone"] != -1:
-            print(info["name"], info["transform"])
 
         #Cleanup
         glUseProgram(0)

@@ -11,10 +11,10 @@ import sys
 import os
 import pickle
 import gzip
+from random import Random
 from camera import Camera
 from model import Mesh, Armature
 from OpenGL.GL.shaders import compileProgram, compileShader
-
 from intelligence import *
 from levelgeneration import LevelGenerator
 from components import *
@@ -54,12 +54,14 @@ class Game(QtOpenGLWidgets.QOpenGLWidget):
         self.shaders = {}
         self.textures = {}
         self.qimages = []  # Absolute hackish way to preserve qimage objects...
+        self.random = Random("Adventure time!")
 
+        # Boot timers
         self.timers = {}
         self.timers["render"] = QTimer()
         self.timers["render"].timeout.connect(self.update)
         #self.timers["render"].setInterval(8)
-        self.timers["render"].setInterval(33)
+        self.timers["render"].setInterval(8)
         self.timers["render"].start()
 
         self.timers["fixed_step"] = QTimer()
@@ -85,6 +87,14 @@ class Game(QtOpenGLWidgets.QOpenGLWidget):
             }
         )
         print(self.intelligence.chooseAction(100001, [100001, 100002]))
+
+        from weightedrandom import WeightedRandom
+        wr = WeightedRandom()
+        for i in range(1, 11):
+            wr.addGroup(10*i, f"{i} Group")
+
+        for i in range(1, 6):
+            print(wr.getRandom(self))
 
     def fixedTimeStep(self):
         self.eventBroadcast(FixedTimeStepEvent(self))
@@ -116,9 +126,9 @@ class Game(QtOpenGLWidgets.QOpenGLWidget):
 
         #############TEST CODE###################
         #level = LevelGenerator(10, 10)
-
+        '''
         renderable = RenderableDynamic(
-                    meshes=["Mage_Head", "Mage_ArmLeft", "Mage_ArmRight", "Mage_Body", "Mage_LegLeft", "2H_Staff", "Mage_Hat", "Mage_LegRight"], #, "Mage_Cape"
+                    meshes=["Mage_Head", "Mage_ArmLeft", "Mage_ArmRight", "Mage_Body", "Mage_LegLeft", "2H_Staff", "Mage_Hat","Spellbook_open", "Mage_LegRight"], #
                     position=np.array((600, 0, 0), dtype=np.float32),
                     armature="Rig"
                 )
@@ -133,13 +143,13 @@ class Game(QtOpenGLWidgets.QOpenGLWidget):
             ]
         )
 
-        '''
         renderable = RenderableDynamic(
-                    meshes=["Box"],
-                    position=np.array((0, 0, 0), dtype=np.float32),
-                    armature="Angle"
-                )
-        #renderable.animation = "Death_A_Rig"
+            meshes=["Body"],
+            position=np.array((600, 0, 0), dtype=np.float32),
+            armature="Armature"
+        )
+        # renderable.animation = "Hit_A_Rig"
+        print([animation for animation in self.armatures["Armature"].animations])
         EntityManager.addComponents(
             components=[
                 renderable
